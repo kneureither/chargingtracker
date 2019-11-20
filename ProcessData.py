@@ -3,14 +3,20 @@ import time
 from utils.plotting import *
 import numpy as np
 
+class ArduinoCommunicator:
+    def __init__(self):
+        self.ser = serial.Serial(
+            port='/dev/cu.usbmodem14101',
+            baudrate=9600,
+            parity=serial.PARITY_ODD,
+            stopbits=serial.STOPBITS_TWO,
+            bytesize=serial.SEVENBITS
+        )
 
-ser = serial.Serial(
-    port='/dev/cu.usbmodem14101',
-    baudrate=9600,
-    parity=serial.PARITY_ODD,
-    stopbits=serial.STOPBITS_TWO,
-    bytesize=serial.SEVENBITS
-)
+    def Request(self, message):
+        ser.
+
+
 
 current_data = []
 data_count = 100
