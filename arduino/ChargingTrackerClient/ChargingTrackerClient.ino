@@ -87,10 +87,18 @@ void setup() {
 void loop() {
   String response = "";
   valid_request = false;
+//
+//  while(1) {
+//    float current = ReadCurrentOnce(current_pin);
+//    Serial.println("A0: " + String(current) + "\n");
+//    delay(100);
+//  }
     
   if(Serial.available()) {
     Serial.readStringUntil('\n').toCharArray(msg, msg_len);
     String message = msg;
+
+    delay(10);
     
     if(strstr(msg, "A0?")) {
       valid_request = true;
@@ -101,7 +109,7 @@ void loop() {
       
       if (stream_count == -1 && mean_count == -1) {
         float current = ReadCurrentOnce(current_pin);
-        Serial.println("A0: " + String(current) + " ");
+        Serial.println("A0: " + String(current) + "  ");
       }
       else if(stream_count != -1 && mean_count == -1) {
         for(int i = 0; i < stream_count; i++) {
@@ -156,12 +164,12 @@ void loop() {
       response = response +  "{ " \
                     "\"mean delay\": " + mean_delay + ", " \
                     "\"stream delay\": " + stream_delay + ", " \
-                    "\"resistance\": " + resistance + " }  ";
+                    "\"resistance\": " + resistance + " }";
       Serial.println(response);              
     }
     
     if(!valid_request) {
-      Serial.println("ERROR : unknown command");
+      Serial.println("ERROR : unknown command:" + message);
     }
   }
 }
