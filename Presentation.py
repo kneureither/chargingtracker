@@ -1,5 +1,6 @@
-import MySQLdb
 from utils.plotting import *
+from matplotlib import pyplot as plt
+from classes.CTDatabase import *
 
 #TODO:
 '''
@@ -10,41 +11,57 @@ calculate total power and show in graph
 
 '''
 
-class CTDatabase:
-    '''Interface for working with chargingtracker database'''
+
+def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles'):
+
+    plt.figure(figsize=(12,8))
+
+    col = ['b', 'r', 'g', 'o']
+
+    filename = 'complete_charging_cycles'
+
+    for i, session in enumerate(sessions):
+        filename += '-' + str(session)
+        data = DB.get_session_data(session)
+        energy = DB.get_session_energy(session)
+        tag = DB.get_session_tag(session)
+
+        plt.plot(np.array(np.array(data[1])), np.array(data[2]) * np.array(data[2]), linestyle='-', marker='.',
+                 color=col[i], label='\n'.join([r"session: " + str(session),
+                                                r"description: " + tag,
+                                                r"$E = {:.2f} Wh$".format(energy)]))
+    # Plot properties
+    plt.grid(False)
+    plt.legend(loc='best')
+    plt.title(title)
+    plt.xlabel(r'Time in $ s $')
+    plt.ylabel(r'Power in $ W $')
+
+    plt.savefig('graphics/' + filename + '.png', dpi=300)
 
 
-    def __init__(self, host="localhost", user="presentation", passwd="presentation", db="chargingtracker"):
-        self.db = MySQLdb._mysql.connect(host=host,
-                                    user=user,
-                                    passwd=passwd,
-                                    db=db)
+def live_plot(DB:CTDatabase):
+    session = DB.get_latest_session()
 
-    def get_session_data(self, session):
-        '''returns session data as 4 dim array with (ts, pyts, A0, session) arrays'''
+    while 1:
+        data = DB.fetch_new_data(session)
+        if data is None:
+            break
 
-        self.db.query("SELECT * from data where ses=4")
-        dbres = self.db.store_result()
-        result = dbres.fetch_row(maxrows=0)
+        print(data)
+        # TODO: Continously update figure with new data
 
-        data = [[] for i in range(4)]
-
-        for entry in result:
-            data[0].append(entry[0])
-            data[1].append(float(entry[1]))
-            data[2].append(float(entry[2]))
-            data[3].append(int(entry[3]))
-
-        return data
-
-    def get_session_power(self, session):
-        pass
 
 
 if __name__ == '__main__':
     DB = CTDatabase()
 
-    session = 4
-    data = DB.get_session_data(session)
+    #session = 4
+    #data = DB.get_session_data(session)
+    #plot2D_x_y(data[1], data[2], 'session '+str(session), xlabel='seconds', ylabel='current in A', title='Charging cycle session '+str(session))
 
-    plot2D_x_y(data[1], data[2], 'session '+str(session), xlabel='seconds', ylabel='current in A', title='Charging cycle session '+str(session))
+    sessions = [11,12]
+    plot_sessions(sessions, DB)
+
+
+
