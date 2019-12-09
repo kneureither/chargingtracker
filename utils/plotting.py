@@ -1,11 +1,10 @@
 #!/usr/local/bin/python
-#! /usr/bin/env python
+#!/usr/bin/env python
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 cus_linestyle = None
-
 
 def plot2D_x_y(xdata, ydata, name='data', title='figure1', xlabel='x axis', ylabel='y_axis'):
     if xdata is None or ydata is None:

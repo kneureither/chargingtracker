@@ -45,6 +45,15 @@ class ArduinoCommunicator:
         self.ser.close()
         self.conn_closed = True
 
+    def _receive(self):
+        response = self.ser.readline().decode()
+        if response[:5] == 'ERROR':
+            raise Exception('Arduino reported Error: ' + response[8:])
+
+    def _tell(self, message):
+        message = message + '\n\r'
+        self.ser.write(message.encode())
+
     def _request(self, message, bytecount=None, sleep=1):
         self.ser.write(message.encode())
 
@@ -62,26 +71,24 @@ class ArduinoCommunicator:
         #print(response)
         return response
 
-    def RequestData(self, message):
-        response = self._request(message, bytecount=32)
+    def _get_first_value(self, response):
         index_in = response.find(':') + 2
         if index_in == 1:
-            #this happens, when : does not exist in string, find() returns -1
             raise IndexError('No valid data found in response from arduino. In index')
         index_out = index_in + 4
-        # index_out = index_in + response[index_in:].find(' ')
-        # if index_out == -1:
-        #     raise IndexError('No valid data found in response from arduino. Out index')
-        return float(response[index_in:index_out])
 
-    def Receive(self):
-        return self.ser.readline()
+        result = float(response[index_in:index_out])
+        response = response[index_in:]
 
-    def Tell(self, message):
-        message = message + '\n\r'
-        self.ser.write(message.encode())
+        return result, response
 
-    def RequestAD(self, mean_count=0):
+    def RequestData(self, message):
+        response = self._request(message, bytecount=32)
+
+        result, _ = self._get_value(response)
+        return result
+
+    def Request_AD(self, mean_count=0):
         if mean_count == 1:
             response = self._request("AD?", bytecount=8)
         elif mean_count > 1:
@@ -89,14 +96,11 @@ class ArduinoCommunicator:
         else:
             raise Exception('Invalid! mean count must be positive, but is: ' + str(mean_count))
 
-        index_in = response.find(' ')
-        if index_in == -1:
-            raise IndexError('No valid data found in response from arduino. In index')
-        index_out = index_in + 4
-        return float(response[index_in:index_out])
+        data, _ = self._get_first_value(response)
+        return data
 
 
-    def RequestV1AD(self, mean_count=1):
+    def Request_V1_AD(self, mean_count=1):
         if mean_count == 1:
             response = self._request("V1? AD?", bytecount=20)
         elif mean_count > 1:
@@ -105,19 +109,13 @@ class ArduinoCommunicator:
             raise Exception('Invalid! mean count must be positive, but is: ' + str(mean_count))
 
         result = []
-
         for i in range(2):
-            index_in = response.find(':') + 2
-            if index_in == -1:
-                raise IndexError('No valid data found in response from arduino. In index')
-            index_out = index_in + 4
-
-            result.append(float(response[index_in:index_out]))
-            response = response[index_in:]
+            data, response = self._get_first_value(response)
+            result.append(data)
 
         return result[0], result[1]
 
-    def RequestV0V1AD(self, mean_count=1):
+    def Request_V0_V1_AD(self, mean_count=1):
         if mean_count == 1:
             response = self._request("V0? V1? AD?", bytecount=29)
         elif mean_count > 1:
@@ -128,15 +126,9 @@ class ArduinoCommunicator:
             raise Exception('Invalid! mean count must be positive, but is: ' + str(mean_count))
 
         result = []
-
         for i in range(3):
-            index_in = response.find(':') + 2
-            if index_in == -1:
-                raise IndexError('No valid data found in response from arduino. In index')
-            index_out = index_in + 4
-
-            result.append(float(response[index_in:index_out]))
-            response = response[index_in:]
+            data, response = self._get_first_value(response)
+            result.append(data)
 
         return result[0], result[1], result[2]
 
@@ -147,13 +139,13 @@ if __name__ == "__main__":
 
     print("started!")
 
-    volt1, curr = Arduino.RequestV1AD(1)
+    volt1, curr = Arduino.Request_V1_AD(1)
     print("V1={:2f} A={:2f}".format(volt1, curr))
-    volt1, curr = Arduino.RequestV1AD(2)
+    volt1, curr = Arduino.Request_V1_AD(2)
     print("V1={:2f} A={:2f}".format(volt1, curr))
 
 
-    volt0, volt1, curr = Arduino.RequestV0V1AD(1)
+    volt0, volt1, curr = Arduino.Request_V0_V1_AD(1)
     print("V0={:2f} V1={:2f}  A={:2f}".format(volt0, volt1, curr))
-    volt0, volt1, curr = Arduino.RequestV0V1AD(2)
+    volt0, volt1, curr = Arduino.Request_V0_V1_AD(2)
     print("V0={:2f} V1={:2f}  A={:2f}".format(volt0, volt1, curr))

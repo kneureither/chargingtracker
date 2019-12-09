@@ -3,22 +3,25 @@ const int pin_1 = 0;
 const int pin_2 = 2;
 const float resistance = 0.1;
 const float restistance_corr_factor = 0.948;
-float voltage_bridge;;
+float voltage_bridge = 1; //default value
 char msg[msg_len];
 float resistance_corr;
 bool valid_request;
 
+// delays in ms
 int mean_delay = 50;
 int stream_delay = 100;
 
-////Functions +++++++++++++++++++++++++++++++++++++++++++++++
 
-float ReadCurrentOnce(int pin) {
-  float voltage_input = analogRead(pin) * voltage_bridge;
-  float voltage = (voltage_input / (float) 1024) * 5.0;
-  float my_current = voltage / resistance_corr;
-  return my_current;
+void setup() {
+  Serial.begin(9600);
+  resistance_corr = resistance * restistance_corr_factor;
+  delay(3000);
+  voltage_bridge = (984+9970) / (float) 9970 * 4.92 / 5.24;
 }
+
+
+////Functions to read and calculate values +++++++++++++++++++++++
 
 float ReadVoltageOnce(int pin) {
   float voltage_input = analogRead(pin) * voltage_bridge;
@@ -33,23 +36,25 @@ float ReadCurrentDiffOnce(int pin_in, int pin_out) {
   return my_current;
 }
 
-float ReadCurrentMean(int pin, int mean_count) {
+float ReadVoltageMean(int pin, int mean_count) {
+  float voltage = 0;
+  for(int i = 0; i < mean_count; i++) {
+    voltage += ReadVoltageOnce(pin);
+    delay(mean_delay);
+  }
+  return voltage / (float) mean_count;
+}
+
+float ReadCurrentDiffMean(int pin_in, int pin_out, int mean_count) {
   float current = 0;
   for(int i = 0; i < mean_count; i++) {
-    current += ReadCurrentOnce(pin);
+    current += ReadCurrentDiffOnce(pin_in, pin_out);
     delay(mean_delay);
   }
   return current / (float) mean_count;
 }
 
-float ReadVoltageMean(int pin, int mean_count) {
-  float current = 0;
-  for(int i = 0; i < mean_count; i++) {
-    current += ReadVoltageOnce(pin);
-    delay(mean_delay);
-  }
-  return current / (float) mean_count;
-}
+////Functions to analyze serial input +++++++++++++++++++++++++++++++
 
 int ReadFlagValue(String command, String flag) {
     command = command + " ";
@@ -87,59 +92,16 @@ String getCommandString(String tag) {
 }
 
 
-
-////Setup and main()++++++++++++++++++++++++++++++++++++++++++
-void setup() {
-  Serial.begin(9600);
-  resistance_corr = resistance * restistance_corr_factor;
-  delay(3000);
-  voltage_bridge = (984+9970) / (float) 9970 * 4.92 / 5.24;
-}
+////main()++++++++++++++++++++++++++++++++++++++++++
 
 void loop() {
-  String response = "";
   valid_request = false;
-//
-//  while(1) {
-//    float current = ReadCurrentOnce(pin_1);
-//    Serial.println("A0: " + String(current) + "\n");
-//    delay(100);
-//  }
     
   if(Serial.available()) {
     Serial.readStringUntil('\n').toCharArray(msg, msg_len);
     String message = msg;
     
-    if(strstr(msg, "A0?")) {
-      valid_request = true;
-      String command = getCommandString("A0?");
-      int stream_count = ReadFlagValue(command, "-stream");
-      int mean_count = ReadFlagValue(command, "-mean");
-      valid_request = true;
-      
-      if (stream_count == -1 && mean_count == -1) {
-        float current = ReadCurrentOnce(pin_1);
-        Serial.println("A0: " + String(current) + "  ");
-      }
-      else if(stream_count != -1 && mean_count == -1) {
-        for(int i = 0; i < stream_count; i++) {
-          float current = ReadCurrentOnce(pin_1);
-          Serial.println("A0: " + String(current) + " delay=" + stream_delay);
-          delay(stream_delay);
-        }
-      }
-      else if(stream_count == -1 && mean_count != -1) {
-        float current = ReadCurrentMean(pin_1, mean_count);
-        Serial.println("A0: " + String(current) + " mean_count=" + mean_count + "delay=" + mean_delay);
-      } 
-      else if(stream_count != -1 && mean_count != -1) {
-        for(int i = 0; i < stream_count; i++) {
-          float current = ReadCurrentMean(pin_1, mean_count);
-          Serial.println("A0: " + String(current) + " mean_count=" + mean_count + "delay=" + mean_delay);
-        }
-      }
-    }
-    else if(strstr(msg, "V0?")) {
+    if(strstr(msg, "V0?")) {
       valid_request = true;
       String command = getCommandString("V0?");
       int stream_count = ReadFlagValue(command, "-stream");
@@ -186,28 +148,53 @@ void loop() {
       }
       else if(stream_count == -1 && mean_count != -1) {
         float voltage = ReadVoltageMean(pin_2, mean_count);
-        Serial.println("V1: " + String(voltage) + " mean_count=" + mean_count + "delay=" + mean_delay);
+        Serial.println("V1: " + String(voltage) + " mean_count=" + mean_count + " delay=" + mean_delay);
       } 
       else if(stream_count != -1 && mean_count != -1) {
         for(int i = 0; i < stream_count; i++) {
           float voltage = ReadVoltageMean(pin_2, mean_count);
-          Serial.println("V1: " + String(voltage) + " mean_count=" + mean_count + "delay=" + mean_delay);
+          Serial.println("V1: " + String(voltage) + " mean_count=" + mean_count + " delay=" + mean_delay);
         }
       }
     }
-    else if(strstr(msg, "A01?")) {
-       valid_request = true;
-       float current = ReadCurrentDiffOnce(pin_1, pin_2);
-       Serial.println("AD: " + String(current));
-    }
+    else if(strstr(msg, "AD?")) {
+      valid_request = true;
+      String command = getCommandString("AD?");
+      int stream_count = ReadFlagValue(command, "-stream");
+      int mean_count = ReadFlagValue(command, "-mean");
 
+      if (stream_count == -1 && mean_count == -1) {
+        float current = ReadCurrentDiffOnce(pin_1, pin_2);
+        Serial.println("AD: " + String(current) + " ");
+      }
+      else if(stream_count != -1 && mean_count == -1) {
+        for(int i = 0; i < stream_count; i++) {
+          float current = ReadCurrentDiffOnce(pin_1, pin_2);
+          Serial.println("AD: " + String(current) + " delay=" + stream_delay);
+          delay(stream_delay);
+        }
+      }
+      else if(stream_count == -1 && mean_count != -1) {
+        float current = ReadCurrentDiffMean(pin_1, pin_2, mean_count);
+        Serial.println("AD: " + String(current) + " mean_count=" + mean_count + " delay=" + mean_delay);
+      } 
+      else if(stream_count != -1 && mean_count != -1) {
+        for(int i = 0; i < stream_count; i++) {
+          float current = ReadCurrentDiffMean(pin_1, pin_2, mean_count);
+          Serial.println("AD: " + String(current) + " mean_count=" + mean_count + " delay=" + mean_delay);
+        }
+      }
+    }
+    
     //no data request but only status? request
     if(valid_request == false && strstr(msg, "Status?")) {
       valid_request = true;
-      response = response +  "{ " \
-                    "\"mean delay\": " + mean_delay + ", " \
-                    "\"stream delay\": " + stream_delay + ", " \
-                    "\"resistance\": " + resistance + " }";
+      String response = "";
+      response = response + "{ " \
+                        "\"mean delay\": " + mean_delay + ", " \
+                        "\"stream delay\": " + stream_delay + ", " \
+                        "\"resistance\": " + resistance + ", " \
+                        "\"bridge\": " + voltage_bridge + " }";
       Serial.println(response);              
     }
     
