@@ -50,6 +50,18 @@ class CTDatabase:
         result = dbres.fetch_row()[0][0]
         return int(result)
 
+    def set_session_tag(self, session, tag):
+        db_data = '(' + str(session) + ', \"' + tag + '\" )'
+        self.db.query("""insert into metatags (session, tag) values """ + db_data)
+
+    def add_percentage_keypoint(self, pyts, session, percentage):
+        self.db.query("""insert into devicebattery (pyts, session, percentage) values 
+                         ({}, {}, {})""".format(pyts, session, percentage))
+
+    def add_data(self, pyts, current, voltage, session):
+        db_data = '(' + str(pyts) + ', ' + str(current) + ', ' + str(voltage) + ', ' + str(session) + ')'
+        self.db.query("""insert into data (pyts, A, V1, ses) values """ + db_data)
+
     def _fetch_once(self, session):
         if self.buffer:
             pass
