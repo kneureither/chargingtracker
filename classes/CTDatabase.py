@@ -34,12 +34,31 @@ class CTDatabase:
         return data
 
     def get_session_tag(self, session):
-        """reads tag for session, stored in separate database"""
+        """reads tag for session, stored in separate database metatags"""
         self.db.query("SELECT * from metatags where session=" + str(session))
         dbres = self.db.store_result()
         result = dbres.fetch_row(maxrows=1)[0]
 
         return result[2].decode("utf-8")
+
+    def get_session_battery_data(self, session):
+        """reads battery data for session, stored in separate database devicebattery"""
+        if session < 16:
+            return None
+
+        self.db.query("SELECT * from devicebattery where session={}".format(session))
+        dbres = self.db.store_result()
+        result = dbres.fetch_row(maxrows=0)
+
+        data = [[] for i in range(4)]
+
+        for entry in result:
+            data[0].append(entry[0])
+            data[1].append(float(entry[1]))
+            data[2].append(int(entry[2]))
+            data[3].append(int(entry[3]))
+
+        return data
 
     def get_latest_session(self):
         self.db.query("SELECT ses from data "
