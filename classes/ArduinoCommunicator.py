@@ -3,7 +3,14 @@ import serial
 import time
 
 class ArduinoCommunicator:
+
     def __init__(self, port='/dev/cu.usbserial-1410'):
+        """
+        Initializes the serial connection and receives the status data
+        which is then stored in a public member of the class.
+
+        :param port: serial port of arduino
+        """
         print('STATUS : Starting connection...')
         self.conn_closed = False
         self.ser = serial.Serial(
@@ -45,16 +52,19 @@ class ArduinoCommunicator:
         self.ser.close()
         self.conn_closed = True
 
-    def _receive(self):
-        response = self.ser.readline().decode()
-        if response[:5] == 'ERROR':
-            raise Exception('Arduino reported Error: ' + response[8:])
-
-    def _tell(self, message):
-        message = message + '\n\r'
-        self.ser.write(message.encode())
-
     def _request(self, message, bytecount=None, sleep=1):
+        """
+        Sends a string to arduino and returns the message received.
+        It waits for a specified amount of bytes.
+
+        :comments:
+        The function 'serial.in_waiting' is compatible with pyserial version 3 and above.
+        Use 'serial.inWaiting()' instead for a pyserial version below 3.
+        :param message: str command to arduino
+        :param bytecount: expected bytecount of response
+        :param sleep: amount of seconds to wait for response, if no bytecount is specified
+        :return response: String of response
+        """
         self.ser.write(message.encode())
 
         if bytecount is not None:
@@ -68,10 +78,17 @@ class ArduinoCommunicator:
         if response[:5] == 'ERROR':
             raise Exception('Arduino reported Error: ' + response[8:])
 
-        #print(response)
         return response
 
     def _get_first_value(self, response):
+        """
+        gets the first numerical value after a ':' in a String.
+
+        :param response: String which contains the value
+        :return: (float, str) the extracted value, a substring of the input
+                              which contains everything behind the number extracted
+        """
+
         index_in = response.find(':') + 2
         if index_in == 1:
             raise IndexError('No valid data found in response from arduino. In index')
@@ -82,13 +99,13 @@ class ArduinoCommunicator:
 
         return result, response
 
-    def RequestData(self, message):
-        response = self._request(message, bytecount=32)
-
-        result, _ = self._get_value(response)
-        return result
-
     def Request_AD(self, mean_count=0):
+        """
+        Reads current from arduino.
+
+        :param mean_count:
+        :return: float with current
+        """
         if mean_count == 1:
             response = self._request("AD?", bytecount=8)
         elif mean_count > 1:
@@ -101,12 +118,20 @@ class ArduinoCommunicator:
 
 
     def Request_V1_AD(self, mean_count=1):
+        """
+        Reads voltage 1 and current from arduino.
+
+        :param mean_count: int
+        :return: tuple with (float, float) (voltage 1, current)
+        """
         if mean_count == 1:
             response = self._request("V1? AD?", bytecount=20)
         elif mean_count > 1:
-            response = self._request("V1? -mean " + str(mean_count) + " AD? -mean " + str(mean_count), bytecount=32)
+            response = self._request("V1? -mean " + str(mean_count) +
+                                     " AD? -mean " + str(mean_count), bytecount=32)
         else:
-            raise Exception('Invalid! mean count must be positive, but is: ' + str(mean_count))
+            raise Exception('Invalid! mean count must be positive, '
+                            'but is: ' + str(mean_count))
 
         result = []
         for i in range(2):
@@ -116,6 +141,12 @@ class ArduinoCommunicator:
         return result[0], result[1]
 
     def Request_V0_V1_AD(self, mean_count=1):
+        """
+        Reads both voltages and current from arduino.
+
+        :param mean_count:
+        :return: tuple (float, float, float) with (voltage 0, voltage 1, current)
+        """
         if mean_count == 1:
             response = self._request("V0? V1? AD?", bytecount=29)
         elif mean_count > 1:
@@ -135,6 +166,8 @@ class ArduinoCommunicator:
 
 
 if __name__ == "__main__":
+    """This is some testing code."""
+
     Arduino = ArduinoCommunicator()
 
     print("started!")
