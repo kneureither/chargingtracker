@@ -1,13 +1,23 @@
 import MySQLdb
 import heapq
 import time
+import numpy as np
 
 class CTDatabase:
-    '''
+    """
     Interface for working with chargingtracker database.
-    '''
+    """
 
-    def __init__(self, host="localhost", user="presentation", passwd="presentation", db="chargingtracker"):
+    def __init__(self, host="localhost", user="presentation",
+                 passwd="presentation", db="chargingtracker"):
+        """
+        initializes connection to database.
+
+        :param host: database host
+        :param user: mysql user
+        :param passwd: user password
+        :param db: database
+        """
         self.db = MySQLdb._mysql.connect(host=host,
                                     user=user,
                                     passwd=passwd,
@@ -16,7 +26,12 @@ class CTDatabase:
         self.ts_reference = 0.0
 
     def get_session_data(self, session):
-        '''returns session data as 4 dim array with (ts, pyts, A0, session) arrays'''
+        """
+        Reads complete session from database.
+
+        :param session: int
+        :return: data session data as 4 dim array with (ts, pyts, A0, session) arrays
+        """
 
         self.db.query("SELECT * from data where ses=" + str(session))
         dbres = self.db.store_result()
@@ -34,7 +49,12 @@ class CTDatabase:
         return data
 
     def get_session_tag(self, session):
-        """reads tag for session, stored in separate database metatags"""
+        """
+        reads tag for session, stored in separate database table 'metatags'.
+
+        :param session: str
+        :return: str of session tag
+        """
         self.db.query("SELECT * from metatags where session=" + str(session))
         dbres = self.db.store_result()
         result = dbres.fetch_row(maxrows=1)[0]
@@ -42,7 +62,12 @@ class CTDatabase:
         return result[2].decode("utf-8")
 
     def get_session_battery_data(self, session):
-        """reads battery data for session, stored in separate database devicebattery"""
+        """
+        reads battery data for session, stored in separate database table 'devicebattery'
+
+        :param session: int
+        :return: array containing the battery data, format of one entry: (ts, pyts, session, batteryvalue)
+        """
         if session < 16:
             return None
 
@@ -61,6 +86,10 @@ class CTDatabase:
         return data
 
     def get_latest_session(self):
+        """
+        get the session value of the most recent data in the database.
+        :return: int
+        """
         self.db.query("SELECT ses from data "
                  "order by ts desc "
                  "limit 1")
@@ -70,18 +99,43 @@ class CTDatabase:
         return int(result)
 
     def set_session_tag(self, session, tag):
+        """
+        works with table 'metatags' and adds a value which assigns a str tag to a session number.
+        :param session: int
+        :param tag: str
+        """
         db_data = '(' + str(session) + ', \"' + tag + '\" )'
         self.db.query("""insert into metatags (session, tag) values """ + db_data)
 
     def add_percentage_keypoint(self, pyts, session, percentage):
+        """
+        Adds an entry to table 'devicebattery'.
+        """
         self.db.query("""insert into devicebattery (pyts, session, percentage) values 
                          ({}, {}, {})""".format(pyts, session, percentage))
 
     def add_data(self, pyts, current, voltage, session):
-        db_data = '(' + str(pyts) + ', ' + str(current) + ', ' + str(voltage) + ', ' + str(session) + ')'
+        """
+        Adds a value to the charging data table 'data'.
+        :param pyts: float
+        :param current: float
+        :param voltage: float
+        :param session: int
+        """
+        db_data = '(' + str(pyts) + ', ' + str(current) + ', ' \
+                  + str(voltage) + ', ' + str(session) + ')'
         self.db.query("""insert into data (pyts, A, V1, ses) values """ + db_data)
 
     def _fetch_once(self, session):
+        """
+        Gathers all available session data from database and stores is in a buffer.
+        Then iteratively returns one tuple for every call.
+        When buffer is empty, it tries to fetch data again until there is no new data added anymore
+        for the session.
+
+        :param session: int
+        :return: tuple of charging data if new data available, else None.
+        """
         if self.buffer:
             pass
         else:
@@ -89,7 +143,7 @@ class CTDatabase:
             dbres = self.db.store_result()
             result = dbres.fetch_row(maxrows=0)
 
-            print(result)
+            #print(result)
 
             if len(result) == 0:
                 return None
@@ -110,17 +164,18 @@ class CTDatabase:
         return (None, entry[0], entry[1], entry[2], entry[3])
 
     def fetch_new_data(self, session):
-        '''
-        gets data entries iteratively from database.
+        """
+        This function is a preparation for real time plotting.
+        Gets data entries iteratively from database.
 
         :returns:   None if there is no data added and everything delivered,
                     next tuple (pyts, V1, A, session) if there is still data that was not read.
-        '''
+        """
         for i in range(2):
             data = self._fetch_once(session)
             if data == None:
                 # Wait twice, if there is new data, if not, assume, that no data is added to db anymore.
-                time.sleep(1)
+                time.sleep(2)
             else:
                 i=0
                 return data
@@ -135,7 +190,7 @@ class CTDatabase:
 
         energy = 0
         for i in range(1, len(data[0])):
-            #power = data[2][i] * data[3][i]
+            #power = np.array(data[2][i]) * np.array(data[3][i])
             power = data[2][i] * 5.0
             energy += power * (data[1][i] - data[1][i-1])
 
