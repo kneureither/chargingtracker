@@ -186,14 +186,26 @@ class CTDatabase:
 
 
     def get_session_energy(self, session):
+        """
+        Reads the charging data of one complete session and calculates the energy in Wh.
+        :param session: int
+        :return: float energy (in Wh)
+        """
         data = self.get_session_data(session)
 
         energy = 0
         for i in range(1, len(data[0])):
-            #power = np.array(data[2][i]) * np.array(data[3][i])
-            power = data[2][i] * 5.0
+            power = np.array(data[2][i]) * np.array(data[3][i])
             energy += power * (data[1][i] - data[1][i-1])
 
         # Convert Ws to Wh
         energy = energy / 3600
         return energy
+
+if __name__ == "__main__":
+    """
+    Some testing code.
+    """
+
+    CT = CTDatabase()
+    print(CT.get_session_energy(18))
