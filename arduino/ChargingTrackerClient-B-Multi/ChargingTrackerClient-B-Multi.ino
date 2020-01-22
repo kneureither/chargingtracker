@@ -6,9 +6,9 @@ const float restistance_corr_factor = 0.948;
 float voltage_bridge = 1; //default value
 char msg[msg_len];
 float resistance_corr;
-bool valid_request;
+bool valid_request; //used to check if any of the received commands was valid
 
-// delays in ms
+// delays in ms, hard coded
 int mean_delay = 50;
 int stream_delay = 100;
 
@@ -17,6 +17,7 @@ void setup() {
   Serial.begin(9600);
   resistance_corr = resistance * restistance_corr_factor;
   delay(3000);
+  // measured values by multimeter for a linear correction term
   voltage_bridge = (984+9970) / (float) 9970 * 4.92 / 5.24;
 }
 
@@ -57,6 +58,8 @@ float ReadCurrentDiffMean(int pin_in, int pin_out, int mean_count) {
 ////Functions to analyse serial input +++++++++++++++++++++++++++++++
 
 int ReadFlagValue(String command, String flag) {
+  //detects if there is a flag in the command
+  //if yes, extracts the value after the flag
     command = command + " ";
     int flag_index = command.indexOf(flag);
     int index_left = command.indexOf(" ", flag_index + 1);
@@ -79,6 +82,7 @@ int ReadFlagValue(String command, String flag) {
 }
 
 String getCommandString(String tag) {
+  //extracts the a command and the corresponding flags for a specific tag, such as "AD?"
   String command;
   String message = msg;
   int com_index_left = message.indexOf(tag);
@@ -97,42 +101,55 @@ String getCommandString(String tag) {
 void loop() {
   valid_request = false;
   String response = "";
-    
+
+  //Get the complete serial command string input
   if(Serial.available()) {
     Serial.readStringUntil('\n').toCharArray(msg, msg_len);
     String message = msg;
-    
+
+
+
+////"VO?" COMMAND ----------------------------------    
     if(strstr(msg, "V0?")) {
       valid_request = true;
+      //Extract part of the string wich belongs to "VO?" and get flag values
       String command = getCommandString("V0?");
       int stream_count = ReadFlagValue(command, "-stream");
       int mean_count = ReadFlagValue(command, "-mean");
 
       if (stream_count == -1 && mean_count == -1) {
         float voltage = ReadVoltageOnce(pin_1);
+        //Append to global response string
         response = response + ("V0: " + String(voltage) + " ");
       }
       else if(stream_count != -1 && mean_count == -1) {
         for(int i = 0; i < stream_count; i++) {
           float voltage = ReadVoltageOnce(pin_1);
+          //For stream, print straight away
           Serial.println("V0: " + String(voltage) + " delay=" + stream_delay + " ");
           delay(stream_delay);
         }
       }
       else if(stream_count == -1 && mean_count != -1) {
         float voltage = ReadVoltageMean(pin_1, mean_count);
+        //Append to global response string
         response = response + ("V0: " + String(voltage) + " mean_count=" + mean_count + "delay=" + mean_delay + " ");
       } 
       else if(stream_count != -1 && mean_count != -1) {
         for(int i = 0; i < stream_count; i++) {
           float voltage = ReadVoltageMean(pin_1, mean_count);
+          //For stream, print straight away
           Serial.println("V0: " + String(voltage) + " mean_count=" + mean_count + "delay=" + mean_delay + " ");
           delay(stream_delay);
         }
       }
     } 
+
+    
+////"V1?" COMMAND ---------------------------------- 
     if(strstr(msg, "V1?")) {
       valid_request = true;
+      //Extract part of the string wich belongs to "V1?" and get flag values
       String command = getCommandString("V1?");
       int stream_count = ReadFlagValue(command, "-stream");
       int mean_count = ReadFlagValue(command, "-mean");
@@ -160,8 +177,11 @@ void loop() {
         }
       }
     }
+
+////"AD?" COMMAND ---------------------------------- 
     if(strstr(msg, "AD?")) {
       valid_request = true;
+      //Extract part of the string wich belongs to "AD?" and get flag values
       String command = getCommandString("AD?");
       int stream_count = ReadFlagValue(command, "-stream");
       int mean_count = ReadFlagValue(command, "-mean");
@@ -190,7 +210,7 @@ void loop() {
       }
     }
     
-    //no data request but only status? request
+////no data request but only status? request
     if(valid_request == false && strstr(msg, "Status?")) {
       valid_request = true;
       response = response + "{ " \
@@ -201,6 +221,7 @@ void loop() {
       //Serial.println(response);              
     }
     
+////Return response -----------------------------------
     if(!valid_request) {
       Serial.println("ERROR : unknown command:" + message);
     }
