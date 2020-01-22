@@ -113,7 +113,7 @@ class CTDatabase:
         """
         Adds an entry to table 'devicebattery'.
         """
-        self.db.query("""insert into devicebattery (pyts, session, percentage) values 
+        self.db.query("""insert into devicebattery (pyts, session, percentage) values
                          ({}, {}, {})""".format(pyts, session, percentage))
 
     def add_data(self, pyts, current, voltage, session):
@@ -210,4 +210,5 @@ if __name__ == "__main__":
     """
 
     CT = CTDatabase()
-    print(CT.get_session_energy(18))
+    CT.add_data(0.0, 1.0, 2.0, 0)
+    # print(CT.get_session_energy(18))
