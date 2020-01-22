@@ -3,14 +3,16 @@ from matplotlib import pyplot as plt
 from classes.CTDatabase import *
 
 
-def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles', draw_battery=True):
+def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles',
+                  draw_battery=True, show_lines=False):
     """
     Saves a plot of all sessions that are passed in the sessions array.
 
     :param sessions: integer array of session ids
     :param DB: database that contains the data
     :param title: title of the plot
-    :param draw_battery: True of percentage tags should be plotted, False if not
+    :param draw_battery: True if percentage tags should be plotted, False if not
+    :param show_lines: True if vertical lines for percentages should be shown, False if not
     :return:
     """
 
@@ -22,7 +24,7 @@ def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles', draw
 
     for i, session in enumerate(sessions):
         filename += '-' + str(session)
-        
+
         #  get data from database
         data = DB.get_session_data(session)
         energy = DB.get_session_energy(session)
@@ -31,6 +33,11 @@ def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles', draw
 
         mean_count = 300
         mean_data = create_mean_data(mean_count, data)
+
+        if show_lines:
+            y_min = 0
+        else:
+            y_min = 2.0
 
         plt.plot(np.array(np.array(data[1])), np.array(data[2]), linestyle='', marker='.',
                  color=col[2*i], label='\n'.join([r"session: " + str(session),
@@ -41,8 +48,8 @@ def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles', draw
 
         if draw_battery and battery_data is not None:
             for j in range(len(battery_data[0])):
-                plt.axvline(x=battery_data[1][j], color=col[2*i], ymax=1.5,
-                             ymin=1.5)
+                plt.axvline(x=battery_data[1][j], color=col[2*i], ymax=2.0,
+                             ymin=y_min)
                 plt.annotate("{}%".format(battery_data[3][j]),
                              (battery_data[1][j], 0.3 + 0.4*i),
                              textcoords="offset points",  # how to position the text
@@ -116,8 +123,3 @@ if __name__ == '__main__':
     # specify which sessions should be included
     sessions = [15, 16, 18]
     plot_sessions(sessions, DB)
-
-
-
-
-
