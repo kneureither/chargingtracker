@@ -54,7 +54,7 @@ float ReadCurrentDiffMean(int pin_in, int pin_out, int mean_count) {
   return current / (float) mean_count;
 }
 
-////Functions to analyze serial input +++++++++++++++++++++++++++++++
+////Functions to analyse serial input +++++++++++++++++++++++++++++++
 
 int ReadFlagValue(String command, String flag) {
     command = command + " ";

@@ -2,17 +2,17 @@ from utils.plotting import *
 from matplotlib import pyplot as plt
 from classes.CTDatabase import *
 
-#TODO:
-'''
-function that presents graph of one whole cycle specified by number
-function that shows the different cycles to choose from
-function that shows ongoing cycle
-calculate total power and show in graph
-
-'''
-
 
 def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles', draw_battery=True):
+    """
+    Saves a plot of all sessions that are passed in the sessions array.
+
+    :param sessions: integer array of session ids
+    :param DB: database that contains the data
+    :param title: title of the plot
+    :param draw_battery: True of percentage tags should be plotted, False if not
+    :return:
+    """
 
     plt.figure(figsize=(12,8))
 
@@ -22,6 +22,8 @@ def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles', draw
 
     for i, session in enumerate(sessions):
         filename += '-' + str(session)
+        
+        #  get data from database
         data = DB.get_session_data(session)
         energy = DB.get_session_energy(session)
         tag = DB.get_session_tag(session)
@@ -30,20 +32,19 @@ def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles', draw
         mean_count = 300
         mean_data = create_mean_data(mean_count, data)
 
-        plt.plot(np.array(np.array(data[1])), np.array(data[2]) * np.array(data[2]), linestyle='', marker='.',
+        plt.plot(np.array(np.array(data[1])), np.array(data[2]), linestyle='', marker='.',
                  color=col[2*i], label='\n'.join([r"session: " + str(session),
                                                 r"tag: {}".format(tag),
                                                 r"$E = {:.2f} Wh$".format(energy)]))
-        plt.plot(np.array(np.array(mean_data[1])), np.array(mean_data[2]) * np.array(mean_data[2]), linestyle='-',
-                 marker=None, color=col[2*i+1], label='\n'.join([r"session: " + str(session),
-                                                              r"mean over $N={:}$ values".format(mean_count)]))
+        plt.plot(np.array(np.array(mean_data[1])), np.array(mean_data[2]), linestyle='-',
+                 marker=None, color=col[2*i+1], label='\n'.join([r"mean over $N={:}$ values".format(mean_count)]))
 
         if draw_battery and battery_data is not None:
             for j in range(len(battery_data[0])):
                 plt.axvline(x=battery_data[1][j], color=col[2*i], ymax=1.5,
                              ymin=1.5)
                 plt.annotate("{}%".format(battery_data[3][j]),
-                             (battery_data[1][j], 0.8 + 0.9*i),
+                             (battery_data[1][j], 0.3 + 0.4*i),
                              textcoords="offset points",  # how to position the text
                              xytext=(0, 0),  # distance from text to points (x,y)
                              ha='center',
@@ -55,12 +56,22 @@ def plot_sessions(sessions, DB:CTDatabase, title='Tracked charging cycles', draw
     plt.legend(loc='best')
     plt.title(title)
     plt.xlabel(r'Time in $ s $')
-    plt.ylabel(r'Power in $ W $')
+    # plt.ylabel(r'Power in $ W $')
+    plt.ylabel(r'Current in $ Ampere $')
 
     plt.savefig('graphics/' + filename + '.png', dpi=300)
 
 
 def create_mean_data(mean_count, data):
+    """
+    Creates a running mean of the data delivered taking into account the previous and following
+    mean_count/2 values for every point in the data array.
+
+    :param mean_count: integer
+    :param data: data from database
+    :return: mean data from data
+    """
+
     start_index = int(mean_count / 2)
     end_index = len(data[0]) - start_index
 
@@ -81,6 +92,12 @@ def create_mean_data(mean_count, data):
 
 
 def live_plot(DB:CTDatabase):
+    """
+    Creates a live plot by always updating it with new data.
+
+    :param DB: database which is continuously updated.
+    :return:
+    """
     session = DB.get_latest_session()
 
     while 1:
@@ -94,14 +111,13 @@ def live_plot(DB:CTDatabase):
 
 
 if __name__ == '__main__':
+
     DB = CTDatabase()
-
-    #session = 4
-    #data = DB.get_session_data(session)
-    #plot2D_x_y(data[1], data[2], 'session '+str(session), xlabel='seconds', ylabel='current in A', title='Charging cycle session '+str(session))
-
-    sessions = [16, 18]
+    # specify which sessions should be included
+    sessions = [15, 16, 18]
     plot_sessions(sessions, DB)
+
+
 
 
 

@@ -52,7 +52,7 @@ class ArduinoCommunicator:
         self.ser.close()
         self.conn_closed = True
 
-    def _request(self, message, bytecount=None, sleep=1):
+    def _request(self, message:str, bytecount=None, sleep=1):
         """
         Sends a string to arduino and returns the message received.
         It waits for a specified amount of bytes.
@@ -60,6 +60,7 @@ class ArduinoCommunicator:
         :comments:
         The function 'serial.in_waiting' is compatible with pyserial version 3 and above.
         Use 'serial.inWaiting()' instead for a pyserial version below 3.
+
         :param message: str command to arduino
         :param bytecount: expected bytecount of response
         :param sleep: amount of seconds to wait for response, if no bytecount is specified
@@ -80,7 +81,7 @@ class ArduinoCommunicator:
 
         return response
 
-    def _get_first_value(self, response):
+    def _get_first_value(self, response:str):
         """
         gets the first numerical value after a ':' in a String.
 

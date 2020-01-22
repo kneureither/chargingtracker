@@ -19,9 +19,11 @@ class CTDatabase:
         :param db: database
         """
         self.db = MySQLdb._mysql.connect(host=host,
-                                    user=user,
-                                    passwd=passwd,
-                                    db=db)
+                                         user=user,
+                                         passwd=passwd,
+                                         db=db)
+
+        #varibles for live plotting
         self.buffer = []
         self.ts_reference = 0.0
 
@@ -50,7 +52,7 @@ class CTDatabase:
 
     def get_session_tag(self, session):
         """
-        reads tag for session, stored in separate database table 'metatags'.
+        Reads tag for session, stored in separate database table 'metatags'.
 
         :param session: str
         :return: str of session tag
@@ -63,7 +65,7 @@ class CTDatabase:
 
     def get_session_battery_data(self, session):
         """
-        reads battery data for session, stored in separate database table 'devicebattery'
+        Reads battery data for session, stored in separate database table 'devicebattery'.
 
         :param session: int
         :return: array containing the battery data, format of one entry: (ts, pyts, session, batteryvalue)
@@ -87,7 +89,7 @@ class CTDatabase:
 
     def get_latest_session(self):
         """
-        get the session value of the most recent data in the database.
+        Get the session value of the most recent data in the database.
         :return: int
         """
         self.db.query("SELECT ses from data "
@@ -100,7 +102,7 @@ class CTDatabase:
 
     def set_session_tag(self, session, tag):
         """
-        works with table 'metatags' and adds a value which assigns a str tag to a session number.
+        Works with table 'metatags' and adds a value which assigns a str tag to a session number.
         :param session: int
         :param tag: str
         """
